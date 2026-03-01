@@ -2,6 +2,7 @@ import multer from "multer";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { randomUUID } from "crypto";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,8 +18,12 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + "-" + file.originalname);
+    const name = path
+      .parse(file.originalname)
+      .name.replace(/[^a-zA-Z0-9]/g, "_")
+      .toLowerCase();
+    const id = randomUUID().split("-")[0];
+    cb(null, `${name}-${id}.pdf`);
   },
 });
 
@@ -35,7 +40,7 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 1048570,
+    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 10 * 1024,
   },
 });
 

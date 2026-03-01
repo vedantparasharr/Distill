@@ -2,7 +2,7 @@ import fs from "fs";
 import { PDFParse } from "pdf-parse";
 
 // Extract text from a pdf
-const extractTextFromPDF = async (filePath) => {
+export const extractTextFromPDF = async (filePath) => {
   try {
     const dataBuffer = fs.readFileSync(filePath);
     const parser = new PDFParse(new Uint8Array(dataBuffer));

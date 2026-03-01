@@ -1,4 +1,5 @@
 import express from "express";
+import upload from "../config/multer.js";
 
 import {
   uploadDocument,
@@ -15,7 +16,7 @@ const router = express.Router();
 
 router.use(protect);
 
-router.post("/upload", uploadDocument);
+router.post("/upload", upload.single("file"), uploadDocument);
 router.get("/", getDocuments);
 router.get("/:id", getDocument);
 router.put("/:id", updateDocument);
