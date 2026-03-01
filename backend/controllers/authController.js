@@ -49,7 +49,7 @@ export const register = async (req, res, next) => {
     });
 
     res.status(201).json({
-      status: true,
+      success: true,
       data: {
         user: {
           id: user._id,
