@@ -26,7 +26,7 @@ const flashcardSchema = new mongoose.Schema(
           type: Boolean,
           default: false,
         },
-        lastRevised: {
+        lastReviewed: {
           type: Date,
           default: null,
         },
