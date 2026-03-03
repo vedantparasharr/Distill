@@ -66,6 +66,51 @@ export const generateFlashcards = async (req, res, next) => {
 // @access
 export const generateQuiz = async (req, res, next) => {
   try {
+    const { documentId, numQuestions = 5, title } = req.body;
+
+    if (!documentId) {
+      return res.status(404).json({
+        success: false,
+        error: "Please provide document Id",
+        statusCode: 404,
+      });
+    }
+
+    const document = await Document.findOne({
+      _id: documentId,
+      userId: req.user._id,
+      status: "ready",
+    });
+
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        error: "Ducument does not exist or not ready",
+        statusCode: 404,
+      });
+    }
+
+    const questions = await geminiService.generateQuiz(
+      document.extractedText,
+      parseInt(numQuestions),
+    );
+
+    // Save to database
+    const quiz = await Quiz.create({
+      userId: req.user._id,
+      documentId: document._id,
+      title: title || `${document.title} - Quiz`,
+      questions: questions,
+      totalQuestions: questions.length,
+      userAnswers: [],
+      score: 0,
+    });
+
+    res.status(201).json({
+      success: true,
+      data: quiz,
+      message: "Quiz gene succ",
+    });
   } catch (error) {
     next(error);
   }
