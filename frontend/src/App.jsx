@@ -1,10 +1,15 @@
 import React from "react";
-import {BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  Navigate,
+} from "react-router-dom";
 
 import LoginPage from "./pages/Auth/LoginPage";
 import RegisterPage from "./pages/Auth/RegisterPage";
 import NotFoundPage from "./pages/Quizzes/NotFoundPage";
-import DashboardPage from "./pages/Dashboard/DashboardPage"
+import DashboardPage from "./pages/Dashboard/DashboardPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import DocumentListPage from "./pages/Documents/DocumentListPage";
 import DocumentDetailPage from "./pages/Documents/DocumentDetailPage";
@@ -13,10 +18,10 @@ import FlashcardPage from "./pages/Flashcards/FlashcardPage";
 import QuizTakePage from "./pages/Quizzes/QuizTakePage";
 import QuizResultPage from "./pages/Quizzes/QuizResultPage";
 import ProfilePage from "./pages/Profile/ProfilePage";
+import { useAuth } from "./context/AuthContext";
 
 const App = () => {
-  const isAuthenticated = false;
-  const loading = false;
+  const { isAuthenticated, loading } = useAuth();
 
   if (loading)
     return (
@@ -42,15 +47,18 @@ const App = () => {
         <Route path="/register" element={<RegisterPage />} />
 
         {/* Protected Routes */}
-        <Route element={<ProtectedRoute/>}>
-          <Route path="/dashboard" element={<DashboardPage/>} />
-          <Route path="/documents" element={<DocumentListPage/>} />
-          <Route path="/documents/:id" element={<DocumentDetailPage/>} />
-          <Route path="/flashcards" element={<FlashcardListPage/>} />
-          <Route path="/documents/:id/flashcards" element={<FlashcardPage/>} />
-          <Route path="/quizzes/:/quizzId" element={<QuizTakePage/>} />
-          <Route path="/quizzes/:quizzId/results" element={<QuizResultPage/>} />
-          <Route path="/profile" element={<ProfilePage/>} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/documents" element={<DocumentListPage />} />
+          <Route path="/documents/:id" element={<DocumentDetailPage />} />
+          <Route path="/flashcards" element={<FlashcardListPage />} />
+          <Route path="/documents/:id/flashcards" element={<FlashcardPage />} />
+          <Route path="/quizzes/:/quizzId" element={<QuizTakePage />} />
+          <Route
+            path="/quizzes/:quizzId/results"
+            element={<QuizResultPage />}
+          />
+          <Route path="/profile" element={<ProfilePage />} />
         </Route>
 
         <Route path="/*" element={<NotFoundPage />} />
