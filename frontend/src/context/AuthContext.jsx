@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useEffect, useState } from "react";
+import authService from "../services/authService";
 
 const AuthContext = createContext();
 
@@ -21,20 +23,10 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch("/api/auth/profile", {
-        credentials: "include",
-      });
-
-      if (response.ok) {
-        const { data } = await response.json();
-        setUser(data);
-        setIsAuthenticated(true);
-      } else {
-        setUser(null);
-        setIsAuthenticated(false);
-      }
-    } catch (error) {
-      console.error("Auth check failed:", error);
+      const response = await authService.getProfile();
+      setUser(response.data);
+      setIsAuthenticated(true);
+    } catch {
       setUser(null);
       setIsAuthenticated(false);
     } finally {
@@ -49,16 +41,13 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch (error) {
-      console.error("Logout failed:", error);
+      await authService.logout();
+    } catch {
+      // Reset local auth state even if the server logout request fails.
     } finally {
       setUser(null);
       setIsAuthenticated(false);
-      window.location.href = "/";
+      window.location.assign("/login");
     }
   };
 

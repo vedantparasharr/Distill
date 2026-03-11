@@ -59,12 +59,22 @@ const changePassword = async (passwords) => {
   }
 };
 
+const logout = async () => {
+  try {
+    const response = await axiosInstance.post(API_PATHS.AUTH.LOGOUT);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "An unknown error occurred" };
+  }
+};
+
 const authService = {
   login,
   register,
   getProfile,
   updateProfile,
   changePassword,
+  logout,
 };
 
 export default authService;

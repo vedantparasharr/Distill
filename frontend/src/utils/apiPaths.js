@@ -1,11 +1,13 @@
-export const BASE_URL = "http://localhost:8000";
+export const BASE_URL =
+  (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
 export const API_PATHS = {
   AUTH: {
     REGISTER: "/api/auth/register",
     LOGIN: "/api/auth/login",
+    LOGOUT: "/api/auth/logout",
     GET_PROFILE: "/api/auth/profile",
-    UPDATE_PROFILE: "/api/auth/profile",
+    UPDATE_PROFILE: "/api/auth/updateProfile",
     CHANGE_PASSWORD: "/api/auth/change-password",
   },
 
@@ -35,11 +37,11 @@ export const API_PATHS = {
   },
 
   QUIZZES: {
-    GET_QUIZZES_FOR_DOC: (documentId) => `/api/documents/${documentId}/quizzes`,
-    GET_QUIZ_BY_ID: (id) => `/api/quizzes/${id}`,
-    SUBMIT_QUIZ: (id) => `/api/quizzes/${id}/submit`,
-    GET_QUIZ_RESULTS: (id) => `/api/quizzes/${id}/results`,
-    DELETE_QUIZ: (id) => `/api/quizzes/${id}`,
+    GET_QUIZZES_FOR_DOC: (documentId) => `/api/quiz/${documentId}`,
+    GET_QUIZ_BY_ID: (id) => `/api/quiz/quiz/${id}`,
+    SUBMIT_QUIZ: (id) => `/api/quiz/${id}/submit`,
+    GET_QUIZ_RESULTS: (id) => `/api/quiz/${id}/results`,
+    DELETE_QUIZ: (id) => `/api/quiz/${id}`,
   },
 
   PROGRESS: {

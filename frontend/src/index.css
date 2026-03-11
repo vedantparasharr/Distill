@@ -10,8 +10,13 @@
 @layer base {
   html {
     font-family: var(--font-display);
+    overflow-x: clip;
   }
   body {
     background-color: #fcfbfc;
+    overflow-x: clip;
+  }
+  #root {
+    overflow-x: clip;
   }
 }
