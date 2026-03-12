@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -26,6 +26,29 @@ const TABS = [
 ];
 
 const md = "prose prose-slate max-w-none prose-headings:tracking-tight prose-p:leading-7 prose-li:leading-7 prose-strong:text-slate-950 prose-sm";
+
+const remarkPlugins = [remarkGfm];
+
+const ChatBubble = memo(({ msg }) => (
+  <div className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+    <div
+      className={`max-w-[82%] rounded-3xl px-4 py-3 text-sm leading-7 ${
+        msg.role === "user"
+          ? "bg-slate-950 text-white"
+          : "border border-slate-200 bg-white text-slate-800"
+      }`}
+    >
+      {msg.role === "assistant" ? (
+        <div className={md}>
+          <ReactMarkdown remarkPlugins={remarkPlugins}>{msg.content}</ReactMarkdown>
+        </div>
+      ) : (
+        msg.content
+      )}
+    </div>
+  </div>
+));
+ChatBubble.displayName = "ChatBubble";
 
 const DocumentDetailPage = () => {
   const { id } = useParams();
@@ -254,26 +277,7 @@ const DocumentDetailPage = () => {
               </div>
             ) : (
               chatMessages.map((msg, i) => (
-                <div
-                  key={i}
-                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[82%] rounded-3xl px-4 py-3 text-sm leading-7 ${
-                      msg.role === "user"
-                        ? "bg-slate-950 text-white"
-                        : "border border-slate-200 bg-white text-slate-800"
-                    }`}
-                  >
-                    {msg.role === "assistant" ? (
-                      <div className={md}>
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-                      </div>
-                    ) : (
-                      msg.content
-                    )}
-                  </div>
-                </div>
+                <ChatBubble key={i} msg={msg} />
               ))
             )}
             <div ref={chatBottomRef} />
@@ -354,7 +358,7 @@ const DocumentDetailPage = () => {
             <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.28)]">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-500">Latest summary</p>
               <div className={`mt-4 ${md}`}>
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={remarkPlugins}>{summary}</ReactMarkdown>
               </div>
             </div>
           ) : null}
@@ -387,7 +391,7 @@ const DocumentDetailPage = () => {
               <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="font-semibold text-slate-950">{explanation.concept}</p>
                 <div className={`mt-3 ${md}`}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{explanation.explanation}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={remarkPlugins}>{explanation.explanation}</ReactMarkdown>
                 </div>
               </div>
             ) : null}

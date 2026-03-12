@@ -119,7 +119,7 @@ export const getDocuments = async (req, res, next) => {
         $project: {
           extractedText: 0,
           chunks: 0,
-          flashCardSets: 0,
+          flashcardSets: 0,
           quizzes: 0,
         },
       },
@@ -173,6 +173,8 @@ export const getDocument = async (req, res, next) => {
     await document.save();
 
     const documentData = document.toObject();
+    delete documentData.extractedText;
+    delete documentData.chunks;
     documentData.flashcardCount = flashcardCount;
     documentData.quizCount = quizCount;
 

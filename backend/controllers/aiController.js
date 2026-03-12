@@ -320,9 +320,12 @@ export const getChatHistory = async (req, res, next) => {
       })
     }
 
+    // Return only the last 50 messages to keep payload small
+    const messages = chatHistory.messages.slice(-50);
+
     res.status(200).json({
       success: true,
-      data: chatHistory.messages,
+      data: messages,
       message: "Chat history retrieved successfully",
     })
 

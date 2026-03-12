@@ -5,7 +5,7 @@ export const PageShell = ({ title, description, actions, children }) => (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-          AI Learning Assistant
+          Distill
         </p>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">

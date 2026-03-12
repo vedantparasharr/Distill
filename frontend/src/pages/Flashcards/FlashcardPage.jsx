@@ -131,15 +131,16 @@ const FlashcardPage = () => {
       description="Flip through generated cards, star the important ones, and track review counts."
       actions={<SecondaryButton onClick={loadSets}>Refresh sets</SecondaryButton>}
     >
-      <div className="grid gap-4 sm:gap-6 xl:grid-cols-[0.78fr_1.22fr]">
+      <div className="space-y-4 sm:space-y-6">
+        {/* ── Available sets (horizontal scroll strip) ── */}
         <SectionCard title="Available sets" description="Switch between generated sets for this document.">
-          <div className="space-y-3">
+          <div className="flex gap-3 overflow-x-auto pb-1">
             {flashcardSets.map((set) => (
               <button
                 key={set._id}
                 type="button"
                 onClick={() => setSearchParams({ set: set._id })}
-                className={`block w-full rounded-3xl border p-4 text-left transition ${set._id === activeSet._id ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"}`}
+                className={`min-w-[200px] shrink-0 rounded-3xl border p-4 text-left transition ${set._id === activeSet._id ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -157,7 +158,8 @@ const FlashcardPage = () => {
           </div>
         </SectionCard>
 
-        <SectionCard title="Study" description="Flip the card to reveal the answer, then record your review.">
+        {/* ── Study card with flip ── */}
+        <SectionCard title="Study" description="Click the card to flip it, then navigate or mark reviewed.">
           <div className="flex items-center justify-between gap-4">
             <p className="text-sm text-slate-600">
               Card {cardIndex + 1} of {activeSet.cards.length}
@@ -173,20 +175,37 @@ const FlashcardPage = () => {
             </button>
           </div>
 
+          {/* Flip card */}
           <button
             type="button"
             onClick={() => setIsFlipped((current) => !current)}
-            className="mt-5 block min-h-[280px] w-full rounded-3xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 text-left shadow-[0_22px_60px_-38px_rgba(15,23,42,0.45)] transition hover:border-slate-300 sm:min-h-[360px] sm:rounded-[2rem] sm:p-8"
+            className="flip-card mt-5 block w-full cursor-pointer text-left"
+            aria-label={isFlipped ? "Showing answer — click to see question" : "Showing question — click to see answer"}
           >
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-orange-500">
-              {isFlipped ? "Answer" : "Question"}
-            </p>
-            <div className="mt-6 text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">
-              {isFlipped ? currentCard?.answer : currentCard?.question}
+            <div className={`flip-card-inner ${isFlipped ? "flipped" : ""}`}>
+              {/* Front — Question */}
+              <div className="flip-card-front rounded-3xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-[0_22px_60px_-38px_rgba(15,23,42,0.45)] sm:rounded-[2rem] sm:p-8">
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-orange-500">Question</p>
+                <div className="mt-6 text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">
+                  {currentCard?.question}
+                </div>
+                <p className="mt-6 text-sm leading-7 text-slate-500">Click to reveal answer</p>
+                <p className="mt-2 text-sm leading-7 text-slate-600">
+                  Difficulty: {currentCard?.difficulty} &middot; Reviews: {currentCard?.reviewCount || 0}
+                </p>
+              </div>
+              {/* Back — Answer */}
+              <div className="flip-card-back rounded-3xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f0f9ff_100%)] p-5 shadow-[0_22px_60px_-38px_rgba(15,23,42,0.45)] sm:rounded-[2rem] sm:p-8">
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-600">Answer</p>
+                <div className="mt-6 text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">
+                  {currentCard?.answer}
+                </div>
+                <p className="mt-6 text-sm leading-7 text-slate-500">Click to see question</p>
+                <p className="mt-2 text-sm leading-7 text-slate-600">
+                  Difficulty: {currentCard?.difficulty} &middot; Reviews: {currentCard?.reviewCount || 0}
+                </p>
+              </div>
             </div>
-            <p className="mt-6 text-sm leading-7 text-slate-600">
-              Difficulty: {currentCard?.difficulty} • Reviews: {currentCard?.reviewCount || 0}
-            </p>
           </button>
 
           <div className="mt-5 flex flex-wrap gap-3">

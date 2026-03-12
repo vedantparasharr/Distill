@@ -18,25 +18,33 @@ export const getDashboard = async (req, res, next) => {
         Quiz.countDocuments({ userId, completedAt: { $ne: null } }),
       ]);
 
-    // Aggregate flashcard statistics across all sets
-    const flashcardSets = await Flashcard.find({ userId });
-    let totalFlashcards = 0;
-    let reviewedFlashcards = 0;
-    let starredFlashcards = 0;
-    flashcardSets.forEach((set) => {
-      totalFlashcards += set.cards.length;
-      reviewedFlashcards += set.cards.filter((c) => c.reviewCount > 0).length;
-      starredFlashcards += set.cards.filter((c) => c.isStarred).length;
-    });
+    // Aggregate flashcard statistics in MongoDB instead of loading all docs
+    const [flashcardStats] = await Flashcard.aggregate([
+      { $match: { userId: req.user._id } },
+      { $unwind: "$cards" },
+      {
+        $group: {
+          _id: null,
+          totalFlashcards: { $sum: 1 },
+          reviewedFlashcards: {
+            $sum: { $cond: [{ $gt: ["$cards.reviewCount", 0] }, 1, 0] },
+          },
+          starredFlashcards: {
+            $sum: { $cond: ["$cards.isStarred", 1, 0] },
+          },
+        },
+      },
+    ]);
+    const totalFlashcards = flashcardStats?.totalFlashcards || 0;
+    const reviewedFlashcards = flashcardStats?.reviewedFlashcards || 0;
+    const starredFlashcards = flashcardStats?.starredFlashcards || 0;
 
-    // Calculate average score across all completed quizzes
-    const quizzes = await Quiz.find({ userId, completedAt: { $ne: null } });
-    const averageScore =
-      quizzes.length > 0
-        ? Math.round(
-            quizzes.reduce((sum, q) => sum + q.score, 0) / quizzes.length,
-          )
-        : 0;
+    // Aggregate average score in MongoDB
+    const [quizStats] = await Quiz.aggregate([
+      { $match: { userId: req.user._id, completedAt: { $ne: null } } },
+      { $group: { _id: null, averageScore: { $avg: "$score" } } },
+    ]);
+    const averageScore = Math.round(quizStats?.averageScore || 0);
 
     // Fetch the 5 most recently accessed documents
     const recentDocuments = await Document.find({ userId })

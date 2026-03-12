@@ -92,27 +92,7 @@ const QuizTakePage = () => {
         </div>
       }
     >
-      <div className="grid gap-4 sm:gap-6 xl:grid-cols-[0.34fr_0.66fr]">
-        <SectionCard title="Question map" description="Jump to any question.">
-          <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 sm:gap-3">
-            {quiz.questions.map((_, index) => {
-              const isAnswered = Boolean(answers[index]);
-              const isCurrent = currentIndex === index;
-
-              return (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => setCurrentIndex(index)}
-                  className={`aspect-square rounded-2xl border text-sm font-semibold transition ${isCurrent ? "border-slate-950 bg-slate-950 text-white" : isAnswered ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-950"}`}
-                >
-                  {index + 1}
-                </button>
-              );
-            })}
-          </div>
-        </SectionCard>
-
+      <div className="mx-auto grid w-full max-w-4xl gap-4 sm:gap-5">
         <SectionCard title={`Question ${currentIndex + 1}`} description={currentQuestion?.difficulty ? `Difficulty: ${currentQuestion.difficulty}` : undefined}>
           <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
             {currentQuestion?.question}
@@ -153,6 +133,27 @@ const QuizTakePage = () => {
             <PrimaryButton type="button" onClick={handleSubmit} disabled={submitting}>
               {submitting ? "Submitting..." : "Submit quiz"}
             </PrimaryButton>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Question map" description="Jump quickly.">
+          <div className="flex flex-wrap gap-2">
+            {quiz.questions.map((_, index) => {
+              const isAnswered = Boolean(answers[index]);
+              const isCurrent = currentIndex === index;
+
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => setCurrentIndex(index)}
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border text-xs font-semibold transition ${isCurrent ? "border-slate-950 bg-slate-950 text-white" : isAnswered ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-950"}`}
+                  aria-label={`Go to question ${index + 1}`}
+                >
+                  {index + 1}
+                </button>
+              );
+            })}
           </div>
         </SectionCard>
       </div>
