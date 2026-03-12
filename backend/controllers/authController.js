@@ -1,6 +1,17 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
+// Returns cookie options based on actual request protocol (works without NODE_ENV)
+const getCookieOptions = (req, maxAge = 7 * 24 * 60 * 60 * 1000) => {
+  const isSecure = req.secure || req.headers["x-forwarded-proto"] === "https";
+  return {
+    httpOnly: true,
+    secure: isSecure,
+    sameSite: isSecure ? "none" : "lax",
+    maxAge,
+  };
+};
+
 // Generate and sign a JWT token with the user's ID
 const generateToken = (id) => {
   return jwt.sign(
@@ -41,12 +52,7 @@ export const register = async (req, res, next) => {
 
     // Generate authentication token and set HTTP-only cookie
     const token = generateToken(user._id);
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie("token", token, getCookieOptions(req));
 
     res.status(201).json({
       success: true,
@@ -105,12 +111,7 @@ export const login = async (req, res, next) => {
 
     // Generate authentication token and set HTTP-only cookie
     const token = generateToken(user._id);
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie("token", token, getCookieOptions(req));
 
     res.status(200).json({
       status: true,
@@ -135,11 +136,7 @@ export const login = async (req, res, next) => {
 // @route POST api/auth/logout
 // @access public
 export const logout = (req, res) => {
-  res.clearCookie("token", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-  });
+  res.clearCookie("token", getCookieOptions(req, 0));
   res.status(200).json({ success: true, message: "Logged out successfully" });
 };
 
