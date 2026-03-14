@@ -12,17 +12,40 @@ const documentSchema = new mongoose.Schema(
       required: [true, "Please provide a document title"],
       trim: true,
     },
+    sourceType: {
+      type: String,
+      enum: ["pdf", "youtube"],
+      default: "pdf",
+      required: true,
+    },
+    sourceUrl: {
+      type: String,
+      require() {
+        return this.sourceType === "youtube";
+      },
+      default: "",
+      trim: true,
+    },
     fileName: {
       type: String,
-      required: true,
+      required() {
+        return this.sourceType === "pdf";
+      },
+      default: "",
     },
     filePath: {
       type: String,
-      required: true,
+      required() {
+        return this.sourceType === "pdf";
+      },
+      default: "",
     },
     fileSize: {
       type: Number,
-      required: true,
+      required() {
+        return this.sourceType === "pdf";
+      },
+      default: 0,
     },
     extractedText: {
       type: String,
@@ -63,7 +86,7 @@ const documentSchema = new mongoose.Schema(
   },
 );
 
-documentSchema.index({ userId: 1, uploadDate: -1 });
+documentSchema.index({ userId: 1, sourceType: 1, uploadDate: -1 });
 
 const Document = mongoose.model("Document", documentSchema);
 

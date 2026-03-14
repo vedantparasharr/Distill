@@ -7,6 +7,7 @@ import fs from "fs/promises";
 import mongoose from "mongoose";
 import path from "path";
 import { fileURLToPath } from "url";
+import { extractTranscriptFromYT } from "../utils/ytParser.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,6 +41,7 @@ export const uploadDocument = async (req, res, next) => {
     const document = await Document.create({
       userId: req.user.id,
       title,
+      sourceType: "pdf",
       fileName: req.file.originalname,
       filePath: fileUrl,
       fileSize: req.file.size,
@@ -84,14 +86,91 @@ const processPDF = async (documentId, filePath) => {
   }
 };
 
+// @desc  Upload YT Video
+// @route POST /api/documents/youtube
+// @access Private
+export const createYouTubeDocument = async (req, res, next) => {
+  try {
+    const { title, url } = req.body;
+    if (!url) {
+      return res.status(400).json({
+        success: false,
+        error: "URL is required",
+        statusCode: 400,
+      });
+    }
+
+    if (!title) {
+      return res.status(400).json({
+        success: false,
+        error: "Title is required",
+        statusCode: 400,
+      });
+    }
+
+    const document = await Document.create({
+      userId: req.user.id,
+      title,
+      sourceType: "youtube",
+      sourceUrl: url,
+      status: "processing",
+    });
+
+    processYT(document._id, url).catch((err) => {
+      console.error("YouTube processing error", err);
+    });
+
+    res.status(201).json({
+      success: true,
+      data: document,
+      message: "Document uploaded. Processing in background...",
+      statusCode: 201,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// helper function for youtube videos
+const processYT = async (documentId, url) => {
+  try {
+    const { text } = await extractTranscriptFromYT(url);
+    const chunks = await chunkText(text, 500, 50);
+
+    await Document.findByIdAndUpdate(documentId, {
+      extractedText: text,
+      chunks: chunks,
+      status: "ready",
+    });
+    console.log(`Document ${documentId} processed successfully`);
+  } catch (error) {
+    console.error(`Error processing document ${documentId}`, error);
+    await Document.findByIdAndUpdate(documentId, {
+      status: "failed",
+    });
+  }
+};
+
 // @desc  Get all user documents
 // @route GET /api/documents/
 // @access Private
 export const getDocuments = async (req, res, next) => {
   try {
+    const { sourceType } = req.query;
+    if (!sourceType || !["pdf", "youtube"].includes(sourceType)) {
+      return res.status(400).json({
+        success: false,
+        error: "sourceType query is required and must be 'pdf' or 'youtube'",
+        statusCode: 400,
+      });
+    }
+
     const documents = await Document.aggregate([
       {
-        $match: { userId: new mongoose.Types.ObjectId(req.user._id) },
+        $match: {
+          userId: new mongoose.Types.ObjectId(req.user._id),
+          sourceType,
+        },
       },
       {
         $lookup: {
@@ -207,12 +286,15 @@ export const deleteDocument = async (req, res, next) => {
       });
     }
 
-    const relativePath = document.filePath.replace(
-      `http://localhost:${process.env.PORT || 8000}`,
-      "",
-    );
-    const absolutePath = path.join(__dirname, "..", relativePath);
-    await fs.unlink(absolutePath).catch(() => {});
+    if (document.sourceType === "pdf" && document.filePath) {
+      const relativePath = document.filePath.replace(
+        `http://localhost:${process.env.PORT || 8000}`,
+        "",
+      );
+      const absolutePath = path.join(__dirname, "..", relativePath);
+      await fs.unlink(absolutePath).catch(() => {});
+    }
+
     await document.deleteOne();
 
     res.status(200).json({
