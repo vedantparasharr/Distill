@@ -13,6 +13,7 @@ export const API_PATHS = {
 
   DOCUMENTS: {
     UPLOAD: "/api/documents/upload",
+    UPLOAD_YT: "/api/documents/youtube",
     GET_DOCUMENTS_PDF: "/api/documents?sourceType=pdf",
     GET_DOCUMENTS_YT: "/api/documents?sourceType=youtube",
     GET_DOCUMENT_BY_ID: (id) => `/api/documents/${id}`,

@@ -1,4 +1,4 @@
-import { BrainCircuit, Droplets, FileText, LayoutDashboard, LogOut, UserCircle2 } from "lucide-react";
+import { BrainCircuit, Droplets, FileText, LayoutDashboard, LogOut, UserCircle2, Youtube } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
@@ -12,6 +12,11 @@ const navigation = [
     to: "/documents",
     label: "Documents",
     icon: FileText,
+  },
+  {
+    to: "/youtube",
+    label: "YouTube",
+    icon: Youtube,
   },
   {
     to: "/flashcards",

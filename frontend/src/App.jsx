@@ -12,6 +12,7 @@ import DashboardPage from "./pages/Dashboard/DashboardPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import DocumentListPage from "./pages/Documents/DocumentListPage";
 import DocumentDetailPage from "./pages/Documents/DocumentDetailPage";
+import YouTubeListPage from "./pages/YouTube/YouTubeListPage";
 import FlashcardListPage from "./pages/Flashcards/FlashcardListPage";
 import FlashcardPage from "./pages/Flashcards/FlashcardPage";
 import QuizTakePage from "./pages/Quizzes/QuizTakePage";
@@ -63,6 +64,9 @@ const App = () => {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/documents" element={<DocumentListPage />} />
           <Route path="/documents/:id" element={<DocumentDetailPage />} />
+          <Route path="/youtube" element={<YouTubeListPage />} />
+          <Route path="/youtube/:id" element={<DocumentDetailPage />} />
+          <Route path="/youtube/:id/flashcards" element={<FlashcardPage />} />
           <Route path="/flashcards" element={<FlashcardListPage />} />
           <Route path="/documents/:id/flashcards" element={<FlashcardPage />} />
           <Route path="/quizzes/:quizId" element={<QuizTakePage />} />
