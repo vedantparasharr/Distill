@@ -30,11 +30,15 @@ connectDB();
 // Enable CORS
 app.use(
   cors({
-    origin: "https://distilllearn.vercel.app",
+    origin: [
+      "https://distilllearn.vercel.app",
+      "http://localhost:3000",
+      "http://localhost:5173",
+    ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
-  }),
+  })
 );
 
 // Parse JSON body
