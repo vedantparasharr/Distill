@@ -19,6 +19,7 @@ import {
 } from "../../components/common/ui";
 
 const TABS = [
+  { key: "viewer", label: "Viewer" },
   { key: "chat", label: "Chat" },
   { key: "ai", label: "AI Actions" },
   { key: "flashcards", label: "Flashcards" },
@@ -28,6 +29,47 @@ const TABS = [
 const md = "prose prose-slate max-w-none prose-headings:tracking-tight prose-p:leading-7 prose-li:leading-7 prose-strong:text-slate-950 prose-sm";
 
 const remarkPlugins = [remarkGfm];
+
+const getYouTubeEmbedUrl = (rawUrl) => {
+  if (!rawUrl) return "";
+
+  try {
+    const parsedUrl = new URL(rawUrl);
+    const host = parsedUrl.hostname.toLowerCase();
+
+    if (host.includes("youtu.be")) {
+      const id = parsedUrl.pathname.replace("/", "").trim();
+      return id
+        ? `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1`
+        : "";
+    }
+
+    if (host.includes("youtube.com")) {
+      if (parsedUrl.pathname.startsWith("/shorts/")) {
+        const id = parsedUrl.pathname.replace("/shorts/", "").split("/")[0];
+        return id
+          ? `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1`
+          : "";
+      }
+
+      const id = parsedUrl.searchParams.get("v");
+      return id
+        ? `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1`
+        : "";
+    }
+
+    return "";
+  } catch {
+    return "";
+  }
+};
+
+const getPdfEmbedUrl = (rawUrl) => {
+  if (!rawUrl) return "";
+
+  // Drive Viewer works in iframe more reliably than docs.google.com/gview.
+  return `https://drive.google.com/viewerng/viewer?embedded=true&url=${encodeURIComponent(rawUrl)}`;
+};
 
 const ChatBubble = memo(({ msg }) => (
   <div className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -63,7 +105,8 @@ const DocumentDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busyAction, setBusyAction] = useState("");
-  const [activeTab, setActiveTab] = useState("chat");
+  const [activeTab, setActiveTab] = useState("viewer");
+  const [viewerLoading, setViewerLoading] = useState(true);
   const chatBottomRef = useRef(null);
 
   const loadWorkspace = useCallback(async () => {
@@ -94,10 +137,24 @@ const DocumentDetailPage = () => {
   }, [chatMessages]);
 
   const isReady = doc?.status === "ready";
+  const isPdf = doc?.sourceType === "pdf";
+  const isYoutube = doc?.sourceType === "youtube";
+  const pdfEmbedUrl = useMemo(
+    () => (isPdf ? getPdfEmbedUrl(doc?.filePath) : ""),
+    [isPdf, doc?.filePath],
+  );
+  const youtubeEmbedUrl = useMemo(
+    () => (isYoutube ? getYouTubeEmbedUrl(doc?.sourceUrl) : ""),
+    [isYoutube, doc?.sourceUrl],
+  );
   const totalCards = useMemo(
     () => flashcardSets.reduce((sum, set) => sum + set.cards.length, 0),
     [flashcardSets],
   );
+
+  useEffect(() => {
+    setViewerLoading(true);
+  }, [activeTab, doc?._id, doc?.filePath, pdfEmbedUrl, youtubeEmbedUrl]);
 
   const handleGenerateSummary = async () => {
     try {
@@ -204,8 +261,15 @@ const DocumentDetailPage = () => {
                 <StatusBadge status={doc.status} />
               </div>
               <p className="mt-1 text-sm text-slate-500">
-                {doc.fileName} · {formatBytes(doc.fileSize)} · uploaded {formatDate(doc.uploadDate)}
+                {isPdf
+                  ? `${doc.fileName} · ${formatBytes(doc.fileSize)} · uploaded ${formatDate(doc.uploadDate)}`
+                  : `YouTube source · added ${formatDate(doc.uploadDate)}`}
               </p>
+              {isYoutube && doc?.sourceUrl ? (
+                <p className="mt-1 max-w-[48ch] truncate text-xs text-slate-500" title={doc.sourceUrl}>
+                  {doc.sourceUrl}
+                </p>
+              ) : null}
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-3">
@@ -217,14 +281,25 @@ const DocumentDetailPage = () => {
                 {quizzes.length} quizzes
               </span>
             </div>
-            {doc.filePath ? (
+            {isPdf && doc?.filePath ? (
               <a
                 href={doc.filePath}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-950"
               >
-                Open PDF
+                Open Full PDF
+                <ArrowUpRight className="h-4 w-4" />
+              </a>
+            ) : null}
+            {isYoutube && doc?.sourceUrl ? (
+              <a
+                href={doc.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-950"
+              >
+                Watch on YouTube
                 <ArrowUpRight className="h-4 w-4" />
               </a>
             ) : null}
@@ -244,7 +319,7 @@ const DocumentDetailPage = () => {
               key={key}
               type="button"
               onClick={() => setActiveTab(key)}
-              className={`flex min-w-[108px] flex-1 items-center justify-center rounded-xl px-3 py-2 text-sm font-semibold transition sm:min-w-0 ${
+              className={`flex min-w-27 flex-1 items-center justify-center rounded-xl px-3 py-2 text-sm font-semibold transition sm:min-w-0 ${
                 activeTab === key
                   ? "bg-white text-slate-950 shadow-sm"
                   : "text-slate-500 hover:text-slate-700"
@@ -255,6 +330,121 @@ const DocumentDetailPage = () => {
           ))}
         </div>
       </div>
+
+      {/* ── Tab: Viewer ── */}
+      {activeTab === "viewer" && (
+        <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.35)] sm:p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight text-slate-950">
+                {isPdf ? "PDF Viewer" : "YouTube Viewer"}
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                {isPdf
+                  ? "Read your PDF inside the workspace. Use Open Full PDF for full-tab reading."
+                  : "Watch the source video alongside your AI study tools."}
+              </p>
+            </div>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+              {isPdf ? "Document" : "YouTube"}
+            </span>
+          </div>
+
+          {isPdf && pdfEmbedUrl ? (
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+              <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2.5 text-sm">
+                <span className="font-medium text-slate-700">Embedded PDF</span>
+                <a
+                  href={doc.filePath}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 font-semibold text-slate-700 hover:text-slate-950"
+                >
+                  Open Full PDF
+                  <ArrowUpRight className="h-4 w-4" />
+                </a>
+              </div>
+              <div className="relative h-[72vh] min-h-120">
+                {viewerLoading ? (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/75">
+                    <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700">
+                      <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-orange-500" />
+                      Loading PDF
+                    </div>
+                  </div>
+                ) : null}
+                <iframe
+                  src={pdfEmbedUrl}
+                  title="PDF Viewer"
+                  className="h-full w-full bg-white"
+                  onLoad={() => setViewerLoading(false)}
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {isYoutube && youtubeEmbedUrl ? (
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+              <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2.5 text-sm">
+                <span className="font-medium text-slate-700">Embedded Player</span>
+                <a
+                  href={doc.sourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 font-semibold text-slate-700 hover:text-slate-950"
+                >
+                  Open on YouTube
+                  <ArrowUpRight className="h-4 w-4" />
+                </a>
+              </div>
+              <div className="relative aspect-video w-full bg-black">
+                {viewerLoading ? (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/45">
+                    <div className="flex items-center gap-3 rounded-full border border-white/25 bg-black/50 px-5 py-2.5 text-sm font-medium text-white">
+                      <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-orange-400" />
+                      Loading video
+                    </div>
+                  </div>
+                ) : null}
+                <iframe
+                  src={youtubeEmbedUrl}
+                  title="YouTube Viewer"
+                  className="h-full w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                  onLoad={() => setViewerLoading(false)}
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {((isPdf && !pdfEmbedUrl) || (isYoutube && !youtubeEmbedUrl)) && (
+            <EmptyState
+              compact
+              title="Viewer source unavailable"
+              description={
+                isPdf
+                  ? "No valid PDF source URL is available for this document yet."
+                  : "This YouTube URL could not be converted into an embeddable player link."
+              }
+              action={
+                isYoutube && doc?.sourceUrl ? (
+                  <a
+                    href={doc.sourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-950"
+                  >
+                    Open original link
+                    <ArrowUpRight className="h-4 w-4" />
+                  </a>
+                ) : null
+              }
+            />
+          )}
+        </div>
+      )}
 
       {/* ── Tab: Chat ── */}
       {activeTab === "chat" && (
@@ -296,7 +486,7 @@ const DocumentDetailPage = () => {
               type="button"
               onClick={handleSendMessage}
               disabled={!isReady || busyAction === "chat" || !chatPrompt.trim()}
-              className="aspect-square !px-0 !py-0 h-[46px] w-[46px]"
+              className="aspect-square h-11.5 w-11.5 px-0! py-0!"
             >
               <Send className="h-4 w-4" />
             </PrimaryButton>

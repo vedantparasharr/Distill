@@ -40,6 +40,9 @@ const documentSchema = new mongoose.Schema(
       },
       default: "",
     },
+    publicId: {
+      type: String,
+    },
     fileSize: {
       type: Number,
       required() {

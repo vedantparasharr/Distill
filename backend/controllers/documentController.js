@@ -3,11 +3,13 @@ import Quiz from "../models/Quiz.js";
 import Document from "../models/Document.js";
 import { extractTextFromPDF } from "../utils/pdfParser.js";
 import { chunkText } from "../utils/textChunker.js";
-import fs from "fs/promises";
 import mongoose from "mongoose";
 import path from "path";
 import { fileURLToPath } from "url";
 import { extractTranscriptFromYT } from "../utils/ytParser.js";
+import { randomUUID } from "crypto";
+import uploadToCloudinary from "../config/cloudinary.js";
+import { v2 as cloudinary } from "cloudinary";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,55 +23,54 @@ export const uploadDocument = async (req, res, next) => {
       return res.status(400).json({
         success: false,
         error: "No file uploaded",
-        statusCode: 400,
       });
     }
 
     const { title } = req.body;
+
     if (!title) {
-      await fs.unlink(req.file.path);
       return res.status(400).json({
         success: false,
         error: "Title is required",
-        statusCode: 400,
       });
     }
 
-    const baseUrl = `http://localhost:${process.env.PORT || 8000}`;
-    const fileUrl = `${baseUrl}/uploads/documents/${req.file.filename}`;
+    const name = path
+      .parse(req.file.originalname)
+      .name.replace(/[^a-zA-Z0-9]/g, "_")
+      .toLowerCase();
+
+    const id = randomUUID().split("-")[0];
+
+    const result = await uploadToCloudinary(req.file.buffer, `${name}-${id}`);
 
     const document = await Document.create({
       userId: req.user.id,
       title,
       sourceType: "pdf",
       fileName: req.file.originalname,
-      filePath: fileUrl,
+      filePath: result.secure_url,
+      publicId: result.public_id,
       fileSize: req.file.size,
       status: "processing",
     });
 
-    processPDF(document._id, req.file.path).catch((err) => {
-      console.error("PDF processing error", err);
-    });
+    processPDF(document._id, req.file.buffer).catch(console.error);
 
     res.status(201).json({
       success: true,
       data: document,
       message: "Document uploaded. Processing in background...",
-      statusCode: 201,
     });
   } catch (error) {
-    if (req.file) {
-      await fs.unlink(req.file.path).catch(() => {});
-    }
     next(error);
   }
 };
 
 // Helper function to process PDF
-const processPDF = async (documentId, filePath) => {
+const processPDF = async (documentId, buffer) => {
   try {
-    const { text } = await extractTextFromPDF(filePath);
+    const { text } = await extractTextFromPDF(buffer);
     const chunks = await chunkText(text, 500, 50);
 
     await Document.findByIdAndUpdate(documentId, {
@@ -286,15 +287,16 @@ export const deleteDocument = async (req, res, next) => {
       });
     }
 
-    if (document.sourceType === "pdf" && document.filePath) {
-      const relativePath = document.filePath.replace(
-        `http://localhost:${process.env.PORT || 8000}`,
-        "",
-      );
-      const absolutePath = path.join(__dirname, "..", relativePath);
-      await fs.unlink(absolutePath).catch(() => {});
+    if (document.sourceType === "pdf" && document.publicId) {
+      try {
+        const result = await cloudinary.uploader.destroy(document.publicId, {
+          resource_type: "raw",
+        });
+        console.log("Delete result:", result);
+      } catch (err) {
+        console.log("Cloudinary delete failed", err);
+      }
     }
-
     await document.deleteOne();
 
     res.status(200).json({
