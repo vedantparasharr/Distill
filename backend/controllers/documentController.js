@@ -1,6 +1,7 @@
 import Flashcard from "../models/Flashcard.js";
 import Quiz from "../models/Quiz.js";
 import Document from "../models/Document.js";
+import ChatHistory from "../models/ChatHistory.js";
 import { extractTextFromPDF } from "../utils/pdfParser.js";
 import { chunkText } from "../utils/textChunker.js";
 import mongoose from "mongoose";
@@ -297,7 +298,15 @@ export const deleteDocument = async (req, res, next) => {
         console.log("Cloudinary delete failed", err);
       }
     }
-    await document.deleteOne();
+    await Promise.all([
+      Flashcard.deleteMany({ userId: req.user._id, documentId: document._id }),
+      Quiz.deleteMany({ userId: req.user._id, documentId: document._id }),
+      ChatHistory.deleteMany({
+        userId: req.user._id,
+        documentId: document._id,
+      }),
+      document.deleteOne(),
+    ]);
 
     res.status(200).json({
       success: true,
