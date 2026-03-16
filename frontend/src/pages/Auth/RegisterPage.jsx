@@ -1,12 +1,10 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
 import authService from "../../services/authService";
 
 const RegisterPage = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
   const [form, setForm] = useState({
     username: "",
     email: "",
@@ -31,9 +29,10 @@ const RegisterPage = () => {
         form.email,
         form.password,
       );
-      login(response.data.user);
-      toast.success(response.message || "Account created successfully");
-      navigate("/dashboard", { replace: true });
+      toast.success(response.message || "OTP sent to your email");
+      navigate(`/verify-email?email=${encodeURIComponent(form.email)}`, {
+        replace: true,
+      });
     } catch (error) {
       toast.error(error.error || error.message || "Unable to create account");
     } finally {

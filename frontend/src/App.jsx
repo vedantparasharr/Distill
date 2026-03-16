@@ -7,6 +7,7 @@ import {
 
 import LoginPage from "./pages/Auth/LoginPage";
 import RegisterPage from "./pages/Auth/RegisterPage";
+import VerifyEmailPage from "./pages/Auth/VerifyEmailPage";
 import NotFoundPage from "./pages/Quizzes/NotFoundPage";
 import DashboardPage from "./pages/Dashboard/DashboardPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -56,6 +57,16 @@ const App = () => {
               <Navigate to="/dashboard" replace />
             ) : (
               <RegisterPage />
+            )
+          }
+        />
+        <Route
+          path="/verify-email"
+          element={
+            isAuthenticated ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <VerifyEmailPage />
             )
           }
         />

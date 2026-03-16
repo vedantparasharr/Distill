@@ -8,6 +8,8 @@ import {
   updateProfile,
   changePassword,
   logout,
+  verifyEmailOtp,
+  resendOtp,
 } from "../controllers/authController.js";
 
 import protect from "../middleware/auth.js";
@@ -36,10 +38,28 @@ const loginValidation = [
   body("password").notEmpty().withMessage("Password is required"),
 ];
 
+const emailValidation = [
+  body("email")
+    .isEmail()
+    .normalizeEmail()
+    .withMessage("Please provide a valid email"),
+];
+
+const verifyOtpValidation = [
+  ...emailValidation,
+  body("otp")
+    .isLength({ min: 6, max: 6 })
+    .withMessage("OTP must be 6 digits")
+    .isNumeric()
+    .withMessage("OTP must be numeric"),
+];
+
 // Public routes
 router.post("/register", registerValidation, register);
 router.post("/login", loginValidation, login);
 router.post("/logout", logout);
+router.post("/verify-email", verifyOtpValidation, verifyEmailOtp);
+router.post("/resend-otp", emailValidation, resendOtp);
 
 // Protected routes
 router.get("/profile", protect, getProfile);

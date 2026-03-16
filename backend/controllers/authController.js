@@ -1,5 +1,7 @@
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import User from "../models/User.js";
+import { sendOtpEmail } from "../utils/emailService.js";
 
 // Returns cookie options based on actual request protocol (works without NODE_ENV)
 const getCookieOptions = (req, maxAge = 7 * 24 * 60 * 60 * 1000) => {
@@ -21,6 +23,31 @@ const generateToken = (id) => {
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRE || "7d" },
   );
+};
+
+const OTP_EXPIRY_MS = 10 * 60 * 1000;
+const MAX_OTP_ATTEMPTS = 5;
+
+const generateSixDigitOtp = () => {
+  return String(Math.floor(100000 + Math.random() * 900000));
+};
+
+const hashOtp = (otp) => {
+  return crypto.createHash("sha256").update(String(otp)).digest("hex");
+};
+
+const issueOtpForUser = async (user) => {
+  const otp = generateSixDigitOtp();
+  user.otpHash = hashOtp(otp);
+  user.otpExpiresAt = new Date(Date.now() + OTP_EXPIRY_MS);
+  user.otpAttempts = 0;
+  await user.save({ validateBeforeSave: false });
+
+  await sendOtpEmail({
+    toEmail: user.email,
+    username: user.username,
+    otp,
+  });
 };
 
 // @desc Register
@@ -48,25 +75,20 @@ export const register = async (req, res, next) => {
       email,
       username,
       password,
+      verified: false,
+      verifed: false,
     });
 
-    // Generate authentication token and set HTTP-only cookie
-    const token = generateToken(user._id);
-    res.cookie("token", token, getCookieOptions(req));
+    await issueOtpForUser(user);
 
     res.status(201).json({
       success: true,
       data: {
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          profileImage: user.profileImage,
-          createdAt: user.createdAt,
-        },
-        token,
+        userId: user._id,
+        email: user.email,
+        requiresVerification: true,
       },
-      message: "Account created successfully",
+      message: "Account created. OTP sent to your email.",
     });
   } catch (error) {
     next(error);
@@ -99,6 +121,14 @@ export const login = async (req, res, next) => {
       });
     }
 
+    if (!user.verified && !user.verifed) {
+      return res.status(403).json({
+        success: false,
+        error: "Email not verified. Please verify OTP first.",
+        statusCode: 403,
+      });
+    }
+
     // Verify password
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
@@ -114,7 +144,7 @@ export const login = async (req, res, next) => {
     res.cookie("token", token, getCookieOptions(req));
 
     res.status(200).json({
-      status: true,
+      success: true,
       data: {
         user: {
           id: user._id,
@@ -269,6 +299,150 @@ export const changePassword = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Password updated successfully",
+      statusCode: 200,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc Verify email using OTP
+// @route POST api/auth/verify-email
+// @access public
+export const verifyEmailOtp = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        error: "Email and OTP are required",
+        statusCode: 400,
+      });
+    }
+
+    const user = await User.findOne({ email }).select("+password");
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "User not found",
+        statusCode: 404,
+      });
+    }
+
+    if (user.verified || user.verifed) {
+      const token = generateToken(user._id);
+      res.cookie("token", token, getCookieOptions(req));
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          user: {
+            id: user._id,
+            username: user.username,
+            email: user.email,
+            profileImage: user.profileImage,
+            createdAt: user.createdAt,
+          },
+          token,
+        },
+        message: "Email already verified",
+      });
+    }
+
+    if (!user.otpHash || !user.otpExpiresAt || user.otpExpiresAt < new Date()) {
+      return res.status(400).json({
+        success: false,
+        error: "OTP expired. Request a new one.",
+        statusCode: 400,
+      });
+    }
+
+    if (user.otpAttempts >= MAX_OTP_ATTEMPTS) {
+      return res.status(429).json({
+        success: false,
+        error: "Too many invalid attempts. Request a new OTP.",
+        statusCode: 429,
+      });
+    }
+
+    const isValidOtp = hashOtp(otp) === user.otpHash;
+    if (!isValidOtp) {
+      user.otpAttempts += 1;
+      await user.save({ validateBeforeSave: false });
+
+      return res.status(400).json({
+        success: false,
+        error: "Invalid OTP",
+        statusCode: 400,
+      });
+    }
+
+    user.verified = true;
+    user.verifed = true;
+    user.otpHash = null;
+    user.otpExpiresAt = null;
+    user.otpAttempts = 0;
+    await user.save({ validateBeforeSave: false });
+
+    const token = generateToken(user._id);
+    res.cookie("token", token, getCookieOptions(req));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          profileImage: user.profileImage,
+          createdAt: user.createdAt,
+        },
+        token,
+      },
+      message: "Email verified successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc Resend OTP for email verification
+// @route POST api/auth/resend-otp
+// @access public
+export const resendOtp = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: "Email is required",
+        statusCode: 400,
+      });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "User not found",
+        statusCode: 404,
+      });
+    }
+
+    if (user.verified || user.verifed) {
+      return res.status(400).json({
+        success: false,
+        error: "Email already verified",
+        statusCode: 400,
+      });
+    }
+
+    await issueOtpForUser(user);
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent successfully",
       statusCode: 200,
     });
   } catch (error) {

@@ -26,6 +26,29 @@ const register = async (username, email, password) => {
   }
 };
 
+const verifyEmail = async (email, otp) => {
+  try {
+    const response = await axiosInstance.post(API_PATHS.AUTH.VERIFY_EMAIL, {
+      email,
+      otp,
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "An unknown error occurred" };
+  }
+};
+
+const resendOtp = async (email) => {
+  try {
+    const response = await axiosInstance.post(API_PATHS.AUTH.RESEND_OTP, {
+      email,
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "An unknown error occurred" };
+  }
+};
+
 const getProfile = async () => {
   try {
     const response = await axiosInstance.get(API_PATHS.AUTH.GET_PROFILE);
@@ -71,6 +94,8 @@ const logout = async () => {
 const authService = {
   login,
   register,
+  verifyEmail,
+  resendOtp,
   getProfile,
   updateProfile,
   changePassword,
