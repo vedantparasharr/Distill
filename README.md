@@ -1,8 +1,8 @@
 # Distill — AI Learning Assistant
 
-> Transform any PDF into an interactive study workspace powered by Google Gemini.
+> Transform PDFs and YouTube videos into an interactive study workspace powered by Google Gemini.
 
-Upload documents and instantly generate flashcards, quizzes, summaries, and engage in context-aware AI chat — all grounded in your own study material.
+Upload PDF files or add YouTube videos, then instantly generate flashcards, quizzes, summaries, and context-aware AI chat grounded in your own study material.
 
 **Live demo:** [distilllearn.vercel.app](https://distilllearn.vercel.app)
 
@@ -12,14 +12,14 @@ Upload documents and instantly generate flashcards, quizzes, summaries, and enga
 
 | Feature | Description |
 |---|---|
-| **Document Upload** | Upload PDF files (up to 10 MB); text is extracted and chunked automatically |
+| **Multi-source Ingestion** | Upload PDF files (up to 10 MB) or add YouTube URLs; content is extracted and chunked automatically |
 | **AI Flashcards** | Generate Q&A cards with easy / medium / hard difficulty; star and track reviews |
 | **AI Quizzes** | Multiple-choice quizzes with per-question explanations and scoring |
 | **AI Summary** | Concise structured summary with key concepts, formatted in Markdown |
 | **AI Chat** | Ask any question about your document; answers are grounded in relevant chunks |
 | **Concept Explainer** | Deep-dive explanation of any concept found in the document |
 | **Progress Dashboard** | Aggregated stats on flashcard reviews and quiz attempts |
-| **Auth** | JWT-based authentication via HTTP-only cookies; register, login, profile, password change |
+| **Auth + Verification** | JWT auth via HTTP-only cookies with OTP email verification, register, login, profile, and password change |
 
 ---
 
@@ -30,7 +30,9 @@ Upload documents and instantly generate flashcards, quizzes, summaries, and enga
 - **MongoDB** via **Mongoose 9**
 - **Google Gemini** (`gemini-2.5-flash-lite`) via `@google/genai`
 - **JWT** authentication with HTTP-only cookies
-- **Multer** for file uploads · **pdf-parse** for text extraction
+- **Multer** (memory storage) for file uploads · **pdf-parse** for text extraction
+- **Cloudinary** for PDF file storage
+- **Nodemailer** for OTP email delivery
 - **bcryptjs** for password hashing · **express-validator** for input validation
 
 ### Frontend
@@ -49,7 +51,8 @@ Upload documents and instantly generate flashcards, quizzes, summaries, and enga
 │   ├── server.js                  # Express entry point (port 8000)
 │   ├── config/
 │   │   ├── db.js                  # MongoDB connection
-│   │   └── multer.js              # PDF upload config (10 MB, /uploads/documents)
+│   │   ├── multer.js              # PDF upload config (memory storage, 10 MB default)
+│   │   └── cloudinary.js          # Cloudinary upload config for PDF files
 │   ├── controllers/               # Route logic
 │   │   ├── authController.js
 │   │   ├── aiController.js
@@ -70,8 +73,10 @@ Upload documents and instantly generate flashcards, quizzes, summaries, and enga
 │   ├── utils/
 │   │   ├── geminiService.js       # All Gemini API calls with structured JSON output
 │   │   ├── pdfParser.js           # Text + metadata extraction
-│   │   └── textChunker.js         # 500-word chunks with 50-word overlap
-│   └── uploads/documents/         # Uploaded PDFs (git-ignored)
+│   │   ├── textChunker.js         # 500-word chunks with 50-word overlap
+│   │   ├── ytParser.js            # YouTube transcript extraction
+│   │   └── emailService.js        # OTP email sending
+│   └── uploads/                   # Static folder mount (not primary PDF storage path)
 │
 └── frontend/
     ├── vite.config.js             # Proxies /api → http://localhost:8000
@@ -101,6 +106,8 @@ Upload documents and instantly generate flashcards, quizzes, summaries, and enga
 - Node.js 18 or later
 - A [MongoDB Atlas](https://www.mongodb.com/atlas) cluster (free tier works)
 - A [Google AI Studio](https://ai.google.dev/) API key
+- A [Cloudinary](https://cloudinary.com/) account (for PDF storage)
+- A [youtube-transcript.io](https://www.youtube-transcript.io/) API credential (Basic auth token)
 
 ### 1 — Clone
 
@@ -125,6 +132,10 @@ JWT_SECRET=replace_with_a_long_random_string
 JWT_EXPIRE=7d
 GEMINI_API_KEY=your_google_gemini_api_key
 MAX_FILE_SIZE=10485760
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+YT_TRANSCRIPT=base64_basic_auth_token_for_youtube_transcript_io
 ```
 
 ```bash
@@ -154,7 +165,9 @@ All routes under `/api`. Protected routes require a valid JWT cookie.
 |--------|------|------|-------------|
 | POST | `/register` | — | Create account |
 | POST | `/login` | — | Login and receive cookie |
-| POST | `/logout` | ✓ | Clear auth cookie |
+| POST | `/verify-email` | — | Verify email using 6-digit OTP |
+| POST | `/resend-otp` | — | Resend verification OTP |
+| POST | `/logout` | — | Clear auth cookie |
 | GET | `/profile` | ✓ | Get current user |
 | PUT | `/updateProfile` | ✓ | Update username / email / avatar |
 | POST | `/change-password` | ✓ | Change password |
@@ -164,7 +177,8 @@ All routes under `/api`. Protected routes require a valid JWT cookie.
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | POST | `/upload` | ✓ | Upload PDF (`multipart/form-data`) |
-| GET | `/` | ✓ | List all user documents |
+| POST | `/youtube` | ✓ | Add YouTube video document (`title`, `url`) |
+| GET | `/` | ✓ | List documents filtered by required query `sourceType=pdf|youtube` |
 | GET | `/:id` | ✓ | Get document details |
 | DELETE | `/:id` | ✓ | Delete document |
 
@@ -252,6 +266,10 @@ Add a rewrite rule so React Router works on hard refresh:
 | `MONGODB_URL` | ✓ | MongoDB connection string |
 | `JWT_SECRET` | ✓ | Secret used to sign JWTs |
 | `GEMINI_API_KEY` | ✓ | Google Gemini API key |
+| `CLOUDINARY_CLOUD_NAME` | ✓ | Cloudinary cloud name for PDF uploads |
+| `CLOUDINARY_API_KEY` | ✓ | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | ✓ | Cloudinary API secret |
+| `YT_TRANSCRIPT` | ✓ | Base64 Basic auth token used by youtube-transcript.io |
 | `JWT_EXPIRE` | — | Token lifetime (default `7d`) |
 | `PORT` | — | Server port (default `8000`) |
 | `MAX_FILE_SIZE` | — | Upload limit in bytes (default `10485760`) |
