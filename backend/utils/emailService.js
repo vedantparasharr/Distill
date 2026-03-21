@@ -1,4 +1,3 @@
-import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -8,31 +7,17 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
-const createTransporter = () => {
-  const port = Number(process.env.SMTP_PORT || 587);
-
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port,
-    secure: port === 465, 
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-    tls: {
-      rejectUnauthorized: false,
-    },
-  });
-};
-
 export const sendOtpEmail = async ({ toEmail, username, otp }) => {
-  const transporter = createTransporter();
-  const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER;
+  const fromEmail = process.env.EMAIL_FROM;
+  const apiKey = process.env.BREVO_API_KEY;
   const appName = process.env.APP_NAME || "DistillLearn";
-  const from = `"${appName}" <${fromEmail}>`;
 
   if (!fromEmail) {
-    throw new Error("SMTP_FROM or SMTP_USER must be configured");
+    throw new Error("EMAIL_FROM must be configured");
+  }
+
+  if (!apiKey) {
+    throw new Error("BREVO_API_KEY must be configured");
   }
 
   const html = `
@@ -81,11 +66,32 @@ export const sendOtpEmail = async ({ toEmail, username, otp }) => {
     "If you did not create this account, you can ignore this email.",
   ].join("\n");
 
-  await transporter.sendMail({
-    from,
-    to: toEmail,
-    subject: "Verify your email - DistillLearn",
-    html,
-    text,
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+      "api-key": apiKey,
+    },
+    body: JSON.stringify({
+      sender: {
+        name: appName,
+        email: fromEmail,
+      },
+      to: [
+        {
+          email: toEmail,
+          name: username,
+        },
+      ],
+      subject: "Verify your email - DistillLearn",
+      htmlContent: html,
+      textContent: text,
+    }),
   });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(`Brevo API failed (${response.status}): ${message}`);
+  }
 };

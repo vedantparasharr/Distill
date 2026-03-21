@@ -32,7 +32,7 @@ Upload PDF files or add YouTube videos, then instantly generate flashcards, quiz
 - **JWT** authentication with HTTP-only cookies
 - **Multer** (memory storage) for file uploads · **pdf-parse** for text extraction
 - **Cloudinary** for PDF file storage
-- **Nodemailer** for OTP email delivery
+- **Brevo HTTP API** for OTP email delivery
 - **bcryptjs** for password hashing · **express-validator** for input validation
 
 ### Frontend
@@ -108,6 +108,7 @@ Upload PDF files or add YouTube videos, then instantly generate flashcards, quiz
 - A [Google AI Studio](https://ai.google.dev/) API key
 - A [Cloudinary](https://cloudinary.com/) account (for PDF storage)
 - A [youtube-transcript.io](https://www.youtube-transcript.io/) API credential (Basic auth token)
+- A [Brevo](https://www.brevo.com/) v3 API key and verified sender email
 
 ### 1 — Clone
 
@@ -136,6 +137,9 @@ CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_cloudinary_api_key
 CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 YT_TRANSCRIPT=base64_basic_auth_token_for_youtube_transcript_io
+BREVO_API_KEY=your_brevo_v3_api_key
+EMAIL_FROM=your_verified_sender_email
+APP_NAME=DistillLearn
 ```
 
 ```bash
@@ -270,6 +274,9 @@ Add a rewrite rule so React Router works on hard refresh:
 | `CLOUDINARY_API_KEY` | ✓ | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | ✓ | Cloudinary API secret |
 | `YT_TRANSCRIPT` | ✓ | Base64 Basic auth token used by youtube-transcript.io |
+| `BREVO_API_KEY` | ✓ | Brevo v3 API key used for transactional email |
+| `EMAIL_FROM` | ✓ | Verified sender email used for OTP emails |
+| `APP_NAME` | — | Sender display name (default `DistillLearn`) |
 | `JWT_EXPIRE` | — | Token lifetime (default `7d`) |
 | `PORT` | — | Server port (default `8000`) |
 | `MAX_FILE_SIZE` | — | Upload limit in bytes (default `10485760`) |
