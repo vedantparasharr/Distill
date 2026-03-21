@@ -1,4 +1,4 @@
-# Distill — AI Learning Assistant
+# DistillLearn
 
 > Transform PDFs and YouTube videos into an interactive study workspace powered by Google Gemini.
 
@@ -113,7 +113,7 @@ Upload PDF files or add YouTube videos, then instantly generate flashcards, quiz
 
 ```bash
 git clone <repository-url>
-cd "AI Learning Assistant"
+cd "DistillLearn"
 ```
 
 ### 2 — Backend

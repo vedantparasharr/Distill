@@ -53,7 +53,7 @@ const AppLayout = ({ children }) => {
               <p className="text-sm font-semibold uppercase tracking-[0.28em] text-orange-500">
                 Learn smarter
               </p>
-              <h1 className="text-lg font-semibold tracking-tight">Distill</h1>
+              <h1 className="text-lg font-semibold tracking-tight">DistillLearn</h1>
             </div>
           </div>
 

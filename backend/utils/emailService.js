@@ -28,7 +28,7 @@ const createTransporter = () => {
 export const sendOtpEmail = async ({ toEmail, username, otp }) => {
   const transporter = createTransporter();
   const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER;
-  const appName = process.env.APP_NAME || "Distill AI Learning Assistant";
+  const appName = process.env.APP_NAME || "DistillLearn";
   const from = `"${appName}" <${fromEmail}>`;
 
   if (!fromEmail) {
@@ -42,7 +42,7 @@ export const sendOtpEmail = async ({ toEmail, username, otp }) => {
           <td style="padding:0;">
             <div style="border-radius:24px;overflow:hidden;background:#ffffff;border:1px solid #e2e8f0;box-shadow:0 24px 60px -40px rgba(15,23,42,0.35);">
               <div style="padding:22px 26px;background:#0f172a;color:#f8fafc;">
-                <p style="margin:0;font-size:11px;letter-spacing:0.24em;text-transform:uppercase;color:#fdba74;font-weight:700;">Distill</p>
+                <p style="margin:0;font-size:11px;letter-spacing:0.24em;text-transform:uppercase;color:#fdba74;font-weight:700;">DistillLearn</p>
                 <h1 style="margin:10px 0 0;font-size:24px;line-height:1.25;font-weight:700;color:#ffffff;">Confirm your email</h1>
               </div>
 
@@ -60,7 +60,7 @@ export const sendOtpEmail = async ({ toEmail, username, otp }) => {
               </div>
 
               <div style="padding:14px 26px;background:#f8fafc;border-top:1px solid #e2e8f0;">
-                <p style="margin:0;font-size:12px;line-height:1.6;color:#64748b;">Sent by Distill AI Learning Assistant</p>
+                <p style="margin:0;font-size:12px;line-height:1.6;color:#64748b;">Sent by DistillLearn</p>
               </div>
             </div>
           </td>
@@ -70,7 +70,7 @@ export const sendOtpEmail = async ({ toEmail, username, otp }) => {
   `;
 
   const text = [
-    "Distill - Confirm your email",
+    "DistillLearn - Confirm your email",
     "",
     `Hi ${username},`,
     "",
@@ -84,7 +84,7 @@ export const sendOtpEmail = async ({ toEmail, username, otp }) => {
   await transporter.sendMail({
     from,
     to: toEmail,
-    subject: "Verify your email - Distill",
+    subject: "Verify your email - DistillLearn",
     html,
     text,
   });
