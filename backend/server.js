@@ -34,6 +34,7 @@ app.use(
       "https://distilllearn.vercel.app",
       "http://localhost:3000",
       "http://localhost:5173",
+      "https://www.distillai.tech"
     ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
